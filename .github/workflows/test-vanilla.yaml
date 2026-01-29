@@ -35,28 +35,73 @@ jobs:
       with:
         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
 
-    - name: Build image locally
+    - name: Build image for linux/amd64
       uses: docker/build-push-action@v6
       with:
         context: ./vanilla
         file: vanilla/Dockerfile
-        platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
+        platforms: linux/amd64
         push: false
         load: true
         tags: |
-          terraria-server:vanilla-test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
+          terraria-server:vanilla-amd64
+        cache-from: type=gha,scope=amd64
+        cache-to: type=gha,mode=max,scope=amd64
+
+    - name: Build image for linux/arm/v7
+      uses: docker/build-push-action@v6
+      with:
+        context: ./vanilla
+        file: vanilla/Dockerfile
+        platforms: linux/arm/v7
+        push: false
+        load: true
+        tags: |
+          terraria-server:vanilla-armv7
+        cache-from: type=gha,scope=armv7
+        cache-to: type=gha,mode=max,scope=armv7
+
+    - name: Build image for linux/arm64
+      uses: docker/build-push-action@v6
+      with:
+        context: ./vanilla
+        file: vanilla/Dockerfile
+        platforms: linux/arm64
+        push: false
+        load: true
+        tags: |
+          terraria-server:vanilla-arm64
+        cache-from: type=gha,scope=arm64
+        cache-to: type=gha,mode=max,scope=arm64
+
+    - name: Build image for linux/ppc64le
+      uses: docker/build-push-action@v6
+      with:
+        context: ./vanilla
+        file: vanilla/Dockerfile
+        platforms: linux/ppc64le
+        push: false
+        load: true
+        tags: |
+          terraria-server:vanilla-ppc64le
+        cache-from: type=gha,scope=ppc64le
+        cache-to: type=gha,mode=max,scope=ppc64le
+
     - name: Test each platform
       run: |
-        platforms=("linux/amd64" "linux/arm/v7" "linux/arm64" "linux/ppc64le")
+        declare -A platform_tags=(
+          ["linux/amd64"]="terraria-server:vanilla-amd64"
+          ["linux/arm/v7"]="terraria-server:vanilla-armv7"
+          ["linux/arm64"]="terraria-server:vanilla-arm64"
+          ["linux/ppc64le"]="terraria-server:vanilla-ppc64le"
+        )
 
-        for platform in "${platforms[@]}"; do
+        for platform in "${!platform_tags[@]}"; do
           echo "Testing platform: $platform"
+          tag=${platform_tags[$platform]}
 
           # Start container
-          container_id=$(docker run -d --platform=$platform -p 7777:7777 -e TEST_MODE=true terraria-server:vanilla-test)
+          container_id=$(docker run -d -p 7777:7777 -e TEST_MODE=true $tag)
 
           # Wait for server to start
           timeout=120
