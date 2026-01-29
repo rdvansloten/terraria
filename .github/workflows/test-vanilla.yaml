@@ -92,7 +92,10 @@ jobs:
         # Test Terraria protocol
         success=false
         for attempt in {1..3}; do
-          if echo -ne '\x04\x00\x01\x00' | nc -w 5 localhost 7777 | grep -q "Multiplayer"; then
+          echo "Protocol test attempt $attempt..."
+          response=$(echo -ne '\x04\x00\x01\x00' | nc -w 5 localhost 7777)
+          echo "Server response: $response"
+          if echo "$response" | grep -q "Multiplayer"; then
             success=true
             break
           fi
@@ -108,4 +111,4 @@ jobs:
           exit 1
         fi
 
-        echo "✓ Platform ${{ matrix.platform }} passed tests"
+        echo "Platform ${{ matrix.platform }} passed tests"

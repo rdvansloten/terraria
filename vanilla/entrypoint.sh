@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Select executable based on architecture
-if [ "$TARGETARCH" = "arm64" ] || [ "$TARGETARCH" = "arm" ]; then
+if [ "$TARGETARCH" = "arm64" ] || [ "$TARGETARCH" = "arm" ] || [ "$TARGETARCH" = "ppc64le" ]; then
   SERVER_BINARY="mono ./TerrariaServer.exe"
 else
   SERVER_BINARY="./TerrariaServer"

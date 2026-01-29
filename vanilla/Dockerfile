@@ -76,7 +76,7 @@ RUN chown -R terraria:terraria "$LOG_PATH" "$TERRARIA_SERVER_PATH" \
 
 # Only install mono libraries output by `monodis --assemblyref TerrariaServer.exe`
 # Reduces size by 40% compared to installing package 'mono-runtime'
-RUN if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "arm" ]; then \
+RUN if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "arm" ] || [ "${TARGETARCH}" = "ppc64le" ]; then \
         apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \
         ca-certificates \
         mono-runtime-common \
