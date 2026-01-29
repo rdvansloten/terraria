@@ -30,16 +30,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v6
 
-    - name: Install dependencies
-      uses: jdx/mise-action@v2
-      with:
-        version: 2025.3.6
-        install: true
-        cache: true
-        experimental: false
-        log_level: debug
-        working_directory: .
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -67,7 +57,7 @@ jobs:
         container_id=$(docker run -d --platform=${{ matrix.platform }} -p 7777:7777 -e TEST_MODE=true terraria-server:${{ matrix.tag }})
 
         # Wait for server to start
-        timeout=120
+        timeout=300
         started=false
 
         for ((i=0; i<$timeout; i++)); do
