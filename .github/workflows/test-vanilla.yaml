@@ -34,22 +34,18 @@ jobs:
       with:
         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
 
-    - name: Get Version
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-    - name: Build image locally
-      uses: docker/build-push-action@v6
-      with:
-        context: ./vanilla
-        file: vanilla/Dockerfile
-        platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
-        push: false
-        tags: |
-          ryshe/terraria:vanilla-latest
-          ryshe/terraria:${{ steps.get_version.outputs.VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    # - name: Build image locally
+    #   uses: docker/build-push-action@v6
+    #   with:
+    #     context: ./vanilla
+    #     file: vanilla/Dockerfile
+    #     platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
+    #     push: false
+    #     tags: |
+    #       ryshe/terraria:vanilla-latest
+    #       ryshe/terraria:vanilla-test
+    #     cache-from: type=gha
+    #     cache-to: type=gha,mode=max
     
     - name: Prepare Python environment
       working-directory: tests/
