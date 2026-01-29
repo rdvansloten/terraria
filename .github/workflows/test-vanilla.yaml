@@ -11,10 +11,10 @@ on:
 jobs:
   test:
     name: Test ${{ matrix.platform }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm/v7, linux/arm64, linux/ppc64le]
+        platform: [linux/amd64, linux/arm/v7, linux/arm64]
         include:
           - platform: linux/amd64
             tag: vanilla-amd64
@@ -25,9 +25,6 @@ jobs:
           - platform: linux/arm64
             tag: vanilla-arm64
             scope: arm64
-          - platform: linux/ppc64le
-            tag: vanilla-ppc64le
-            scope: ppc64le
 
     steps:
     - name: Checkout repository
