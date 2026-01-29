@@ -7,9 +7,6 @@ port=7777
 # Set the message of the day.
 motd=Welcome to Terraria!
 
-# Set the server password.
-password=""
-
 # The location of the banlist. Defaults to banlist.txt in the working directory.
 banlist=banlist.txt
 
