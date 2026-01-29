@@ -25,8 +25,10 @@ ADD "$TERRARIA_SERVER_URL" "/${TERRARIA_SERVER_FILENAME}"
 RUN mkdir -p "$CONFIG_PATH" "$LOG_PATH" "$TERRARIA_SERVER_PATH"
 
 RUN unzip "/$TERRARIA_SERVER_FILENAME" -d "/tmp/terraria/" \
-    && mv "/tmp/terraria/${TERRARIA_SERVER_VERSION}/Linux/"* "$TERRARIA_SERVER_PATH" \
-    && mv "/tmp/terraria/${TERRARIA_SERVER_VERSION}/Windows/${CONFIG_FILENAME}" "${CONFIG_PATH}/${CONFIG_FILENAME}"
+    && mv "/tmp/terraria/${TERRARIA_SERVER_VERSION}/Linux/"* "$TERRARIA_SERVER_PATH"
+
+# Copy serverconfig from repository config folder
+COPY config/${CONFIG_FILENAME} ${CONFIG_PATH}/${CONFIG_FILENAME}
 
 # Calculate MD5 of modified serverconfig and save to file for later use
 RUN md5sum "${CONFIG_PATH}/${CONFIG_FILENAME}" | cut -d' ' -f1 > "${CONFIG_PATH}/default-serverconfig.md5"
@@ -50,7 +52,7 @@ LABEL org.opencontainers.image.source="https://github.com/ryansheehan/terraria/b
 LABEL org.opencontainers.image.version="$TERRARIA_SERVER_VERSION"
 
 # Environment variables
-ENV TERRARIA_SERVER_PATH=$TERRARIA_SERVER_PATH
+ENV TERRARIA_SERVER_PATH="$TERRARIA_SERVER_PATH"
 ENV CONFIG_PATH="$CONFIG_PATH"
 ENV CONFIG_FILENAME="$CONFIG_FILENAME"
 ENV LOG_PATH="$LOG_PATH"
@@ -71,12 +73,13 @@ COPY --from=base --chown=terraria:terraria --chmod=0550 "${CONFIG_PATH}/" "${CON
 COPY --chown=terraria:terraria --chmod=0550 "$ENTRYPOINT" "${TERRARIA_SERVER_PATH}/${ENTRYPOINT}"
 
 # Make terraria user owner over relevant paths
-RUN chown -R terraria:terraria "$LOG_PATH" "$TERRARIA_SERVER_PATH" \
-    && chmod -R 770 "$LOG_PATH" "${TERRARIA_SERVER_PATH}/${DEFAULT_TERRARIA_SERVER_PATH}"
+RUN chown -R terraria:terraria "$LOG_PATH" "$TERRARIA_SERVER_PATH" "$CONFIG_PATH" \
+    && chmod -R 770 "$LOG_PATH" "${TERRARIA_SERVER_PATH}/${DEFAULT_TERRARIA_SERVER_PATH}" \
+    && chmod -R 750 "$CONFIG_PATH"
 
 # Only install mono libraries output by `monodis --assemblyref TerrariaServer.exe`
 # Reduces size by 40% compared to installing package 'mono-runtime'
-RUN if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "arm" ]; then \
+RUN if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "arm" ] || [ "${TARGETARCH}" = "ppc64le" ]; then \
         apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \
         ca-certificates \
         mono-runtime-common \
