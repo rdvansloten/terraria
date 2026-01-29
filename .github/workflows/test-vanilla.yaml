@@ -47,12 +47,58 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
-    - name: Prepare Python environment
-      working-directory: tests/
+    - name: Test each platform
       run: |
-        python -m venv venv
-        source venv/bin/activate
-        uv pip install -r requirements.txt
-        pytest terraria_server_vanilla.py -v
+        platforms=("linux/amd64" "linux/arm/v7" "linux/arm64" "linux/ppc64le")
+
+        for platform in "${platforms[@]}"; do
+          echo "Testing platform: $platform"
+
+          # Start container
+          container_id=$(docker run -d --platform=$platform -p 7777:7777 -e TEST_MODE=true terraria-server:vanilla-test)
+
+          # Wait for server to start
+          timeout=120
+          started=false
+
+          for ((i=0; i<$timeout; i++)); do
+            if docker logs $container_id 2>&1 | grep -q "Listening on port 7777"; then
+              started=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$started" = false ]; then
+            echo "Server failed to start for $platform"
+            docker logs $container_id
+            docker stop $container_id
+            docker rm $container_id
+            exit 1
+          fi
+
+          # Test Terraria protocol
+          success=false
+          for attempt in {1..3}; do
+            if echo -ne '\x04\x00\x01\x00' | nc -w 5 localhost 7777 | grep -q "Multiplayer"; then
+              success=true
+              break
+            fi
+            sleep 1
+          done
+
+          # Cleanup
+          docker stop $container_id
+          docker rm $container_id
+
+          if [ "$success" = false ]; then
+            echo "Protocol test failed for $platform"
+            exit 1
+          fi
+
+          echo "Platform $platform passed tests"
+        done
+
+        echo "All platforms passed!"
 
 
