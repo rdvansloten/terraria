@@ -10,8 +10,24 @@ on:
 
 jobs:
   test:
-    name: Test Image
+    name: Test ${{ matrix.platform }}
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm/v7, linux/arm64, linux/ppc64le]
+        include:
+          - platform: linux/amd64
+            tag: vanilla-amd64
+            scope: amd64
+          - platform: linux/arm/v7
+            tag: vanilla-armv7
+            scope: armv7
+          - platform: linux/arm64
+            tag: vanilla-arm64
+            scope: arm64
+          - platform: linux/ppc64le
+            tag: vanilla-ppc64le
+            scope: ppc64le
 
     steps:
     - name: Checkout repository
@@ -32,119 +48,64 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      with:
-        platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
 
-    - name: Build image for linux/amd64
+    - name: Build image for ${{ matrix.platform }}
       uses: docker/build-push-action@v6
       with:
         context: ./vanilla
         file: vanilla/Dockerfile
-        platforms: linux/amd64
+        platforms: ${{ matrix.platform }}
         push: false
         load: true
         tags: |
-          terraria-server:vanilla-amd64
-        cache-from: type=gha,scope=amd64
-        cache-to: type=gha,mode=max,scope=amd64
+          terraria-server:${{ matrix.tag }}
+        cache-from: type=gha,scope=${{ matrix.scope }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
 
-    - name: Build image for linux/arm/v7
-      uses: docker/build-push-action@v6
-      with:
-        context: ./vanilla
-        file: vanilla/Dockerfile
-        platforms: linux/arm/v7
-        push: false
-        load: true
-        tags: |
-          terraria-server:vanilla-armv7
-        cache-from: type=gha,scope=armv7
-        cache-to: type=gha,mode=max,scope=armv7
-
-    - name: Build image for linux/arm64
-      uses: docker/build-push-action@v6
-      with:
-        context: ./vanilla
-        file: vanilla/Dockerfile
-        platforms: linux/arm64
-        push: false
-        load: true
-        tags: |
-          terraria-server:vanilla-arm64
-        cache-from: type=gha,scope=arm64
-        cache-to: type=gha,mode=max,scope=arm64
-
-    - name: Build image for linux/ppc64le
-      uses: docker/build-push-action@v6
-      with:
-        context: ./vanilla
-        file: vanilla/Dockerfile
-        platforms: linux/ppc64le
-        push: false
-        load: true
-        tags: |
-          terraria-server:vanilla-ppc64le
-        cache-from: type=gha,scope=ppc64le
-        cache-to: type=gha,mode=max,scope=ppc64le
-
-    - name: Test each platform
+    - name: Test ${{ matrix.platform }}
       run: |
-        declare -A platform_tags=(
-          ["linux/amd64"]="terraria-server:vanilla-amd64"
-          ["linux/arm/v7"]="terraria-server:vanilla-armv7"
-          ["linux/arm64"]="terraria-server:vanilla-arm64"
-          ["linux/ppc64le"]="terraria-server:vanilla-ppc64le"
-        )
+        echo "Testing platform: ${{ matrix.platform }}"
 
-        for platform in "${!platform_tags[@]}"; do
-          echo "Testing platform: $platform"
-          tag=${platform_tags[$platform]}
+        # Start container
+        container_id=$(docker run -d --platform=${{ matrix.platform }} -p 7777:7777 -e TEST_MODE=true terraria-server:${{ matrix.tag }})
 
-          # Start container
-          container_id=$(docker run -d -p 7777:7777 -e TEST_MODE=true $tag)
+        # Wait for server to start
+        timeout=120
+        started=false
 
-          # Wait for server to start
-          timeout=120
-          started=false
-
-          for ((i=0; i<$timeout; i++)); do
-            if docker logs $container_id 2>&1 | grep -q "Listening on port 7777"; then
-              started=true
-              break
-            fi
-            sleep 1
-          done
-
-          if [ "$started" = false ]; then
-            echo "Server failed to start for $platform"
-            docker logs $container_id
-            docker stop $container_id
-            docker rm $container_id
-            exit 1
+        for ((i=0; i<$timeout; i++)); do
+          if docker logs $container_id 2>&1 | grep -q "Listening on port 7777"; then
+            started=true
+            break
           fi
-
-          # Test Terraria protocol
-          success=false
-          for attempt in {1..3}; do
-            if echo -ne '\x04\x00\x01\x00' | nc -w 5 localhost 7777 | grep -q "Multiplayer"; then
-              success=true
-              break
-            fi
-            sleep 1
-          done
-
-          # Cleanup
-          docker stop $container_id
-          docker rm $container_id
-
-          if [ "$success" = false ]; then
-            echo "Protocol test failed for $platform"
-            exit 1
-          fi
-
-          echo "Platform $platform passed tests"
+          sleep 1
         done
 
-        echo "All platforms passed!"
+        if [ "$started" = false ]; then
+          echo "Server failed to start for ${{ matrix.platform }}"
+          docker logs $container_id
+          docker stop $container_id
+          docker rm $container_id
+          exit 1
+        fi
 
+        # Test Terraria protocol
+        success=false
+        for attempt in {1..3}; do
+          if echo -ne '\x04\x00\x01\x00' | nc -w 5 localhost 7777 | grep -q "Multiplayer"; then
+            success=true
+            break
+          fi
+          sleep 1
+        done
 
+        # Cleanup
+        docker stop $container_id
+        docker rm $container_id
+
+        if [ "$success" = false ]; then
+          echo "Protocol test failed for ${{ matrix.platform }}"
+          exit 1
+        fi
+
+        echo "✓ Platform ${{ matrix.platform }} passed tests"
