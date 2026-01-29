@@ -8,8 +8,8 @@ import pytest
 import docker
 import socket
 import time
-import subprocess
 import json
+import os
 import platform
 from typing import Generator
 
@@ -25,35 +25,26 @@ class TerrariaServerTest:
     def _get_docker_client(self) -> docker.DockerClient:
         """Get Docker client from docker context."""
         try:
-            result = subprocess.run(
-                ["docker", "context", "inspect"],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                context_info = json.loads(result.stdout)
-                if context_info and len(context_info) > 0:
-                    endpoint = context_info[0].get("Endpoints", {}).get("docker", {}).get("Host", "")
-                    if endpoint:
-                        return docker.DockerClient(base_url=endpoint)
+            return docker.from_env()
         except Exception as e:
-            raise RuntimeError(f"Could not get Docker context: {e}")
-
-        raise RuntimeError("Could not connect to Docker daemon. Please ensure Docker is running.")
+            raise RuntimeError(f"Could not connect to Docker daemon. Please ensure Docker is running: {e}")
 
     def build_multi_arch_image(self) -> None:
         """Build the Docker image for all architectures."""
         print("Building multi-arch image for: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le")
 
-        cmd = [
-            "docker", "buildx", "build",
-            "--platform", "linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le",
-            "--tag", self.image_tag,
-            "."
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd="../vanilla")
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to build multi-arch image: {result.stderr}")
+        try:
+            # Use Docker SDK to build the image
+            build_path = os.path.abspath("../vanilla")
+            self.client.images.build(
+                path=build_path,
+                tag=self.image_tag,
+                platform="linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le",
+                buildargs={},
+                nocache=False
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to build multi-arch image: {str(e)}")
 
     def start_container(self, platform: str) -> None:
         """Start the Terraria server container for specific platform."""

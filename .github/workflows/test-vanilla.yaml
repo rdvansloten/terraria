@@ -35,18 +35,17 @@ jobs:
       with:
         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
 
-    # - name: Build image locally
-    #   uses: docker/build-push-action@v6
-    #   with:
-    #     context: ./vanilla
-    #     file: vanilla/Dockerfile
-    #     platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
-    #     push: false
-    #     tags: |
-    #       ryshe/terraria:vanilla-latest
-    #       ryshe/terraria:vanilla-test
-    #     cache-from: type=gha
-    #     cache-to: type=gha,mode=max
+    - name: Build image locally
+      uses: docker/build-push-action@v6
+      with:
+        context: ./vanilla
+        file: vanilla/Dockerfile
+        platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le
+        push: false
+        tags: |
+          terraria-server:vanilla-test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     
     - name: Prepare Python environment
       working-directory: tests/
