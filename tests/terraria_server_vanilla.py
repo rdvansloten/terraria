@@ -47,7 +47,6 @@ class TerrariaServerTest:
         cmd = [
             "docker", "buildx", "build",
             "--platform", "linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le",
-            "--load",
             "--tag", self.image_tag,
             "."
         ]
